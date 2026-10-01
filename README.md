@@ -8,19 +8,7 @@ Spotify zelf is DRM-beveiligd. De tool leest de metadata uit de Spotify-link (vi
 
 ## Installeren
 
-### Windows
-
-```powershell
-python -m venv venv
-venv\Scripts\pip install -r requirements.txt deno
-venv\Scripts\spotdl --download-ffmpeg
-```
-
-Starten: dubbelklik `start.bat`, of `venv\Scripts\python app.py`.
-
-### macOS
-
-Vereist Python 3 en Homebrew.
+Vereist Python 3 en Homebrew (macOS).
 
 ```bash
 python3 -m venv .venv
