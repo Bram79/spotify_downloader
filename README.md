@@ -2,13 +2,25 @@
 
 Lokale tool om Spotify-links (nummer, album of playlist) als mp3 te downloaden, met een eenvoudige web-interface.
 
-Spotify zelf is DRM-beveiligd. De tool leest de metadata uit de Spotify-link (via [spotdl](https://github.com/spotDL/spotify-downloader)), zoekt het nummer op YouTube Music (met SoundCloud als reserve) en zet het om naar mp3 met titel, artiest, album en hoes.
+Spotify zelf is DRM-beveiligd. De tool leest de metadata uit de Spotify-link (via [spotdl](https://github.com/spotDL/spotify-downloader)), zoekt het nummer op YouTube Music (met YouTube, SoundCloud en Piped als reserve; mislukte nummers worden tot 3 keer opnieuw geprobeerd) en zet het om naar mp3 met titel, artiest, album en hoes.
 
 > Alleen voor persoonlijk gebruik. Zet dit niet openbaar online: dat is juridisch riskant.
 
 ## Installeren
 
-Vereist Python 3 en Homebrew (macOS).
+### Windows
+
+```powershell
+python -m venv venv
+venv\Scripts\pip install -r requirements.txt deno
+venv\Scripts\spotdl --download-ffmpeg
+```
+
+Starten: dubbelklik `start.bat`, of `venv\Scripts\python app.py`.
+
+### macOS
+
+Vereist Python 3 en Homebrew.
 
 ```bash
 python3 -m venv .venv
@@ -36,7 +48,7 @@ Bestanden komen standaard in `downloads/`.
 
 ## Goed om te weten
 
-- **Kwaliteit:** de bron (YouTube Music of SoundCloud) bepaalt de kwaliteit, niet de bitrate. Meer dan de bron heeft, kan mp3 320k niet geven.
+- **Kwaliteit:** de bron (YouTube Music, YouTube of SoundCloud) bepaalt de kwaliteit, niet de bitrate. Meer dan de bron heeft, kan mp3 320k niet geven.
 - **Stilte aan het begin** wordt automatisch weggeknipt, want sommige bronnen beginnen met een lange stille intro.
 - **Verkeerde versie:** bij obscure nummers kan de match afwijken (live, remix). Controleer dat even.
 - **Poort:** 5001 in plaats van 5000, omdat macOS 5000 gebruikt voor AirPlay.

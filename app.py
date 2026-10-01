@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Lokale web-interface voor de Spotify-downloader. Draait alleen op 127.0.0.1."""
 import io
+import os
 import re
 import subprocess
+import sys
 import threading
 import uuid
 import zipfile
@@ -11,10 +13,15 @@ from pathlib import Path
 from flask import Flask, abort, jsonify, request, send_file
 
 BASE = Path(__file__).parent
-SPOTDL = BASE / ".venv" / "bin" / "spotdl"
+# spotdl en deno staan naast de python van de actieve venv (bin/ op macOS, Scripts/ op Windows)
+BIN = Path(sys.executable).parent
+SPOTDL = BIN / "spotdl"
+ENV = {**os.environ, "PATH": str(BIN) + os.pathsep + os.environ.get("PATH", "")}
 OUT = BASE / "downloads"
 URL_RE = re.compile(r"^https?://open\.spotify\.com/(?:intl-[a-z]+/)?(track|album|playlist)/\w+")
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+TRACK_ERROR = re.compile(r"^\w*Error: ")
+MAX_ATTEMPTS = 3
 
 app = Flask(__name__)
 jobs: dict[str, dict] = {}
@@ -24,23 +31,29 @@ def run_job(job_id: str, url: str, bitrate: str) -> None:
     job = jobs[job_id]
     job_dir = OUT / job_id
     template = str(job_dir / "{album-artist} - {album}" / "{track-number} - {title}.{output-ext}")
-    proc = subprocess.Popen(
-        [str(SPOTDL), "download", url, "--audio", "youtube-music", "soundcloud", "--format", "mp3", "--bitrate", bitrate,
-         "--ffmpeg-args", "-af silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.2", "--output", template],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
-    )
-    for line in proc.stdout:
-        line = ANSI.sub("", line).strip()
-        if not line:
-            continue
-        if "Error" in line:
-            job["errors"] += 1
-        if line.startswith("Downloaded"):
-            job["done_tracks"] += 1
-        m = re.search(r"Found (\d+) songs", line)
-        if m:
-            job["total"] = int(m.group(1))
-    ok = proc.wait() == 0 and job["errors"] == 0
+    cmd = [str(SPOTDL), "download", url, "--audio", "youtube-music", "youtube", "soundcloud", "piped", "--format", "mp3",
+           "--bitrate", bitrate, "--ffmpeg-args", "-af silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.2",
+           "--output", template]
+    # Mislukte nummers opnieuw proberen; spotdl slaat al gedownloade bestanden over
+    for _ in range(MAX_ATTEMPTS):
+        job["errors"] = 0
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, env=ENV,
+                                encoding="utf-8", errors="replace")
+        for line in proc.stdout:
+            line = ANSI.sub("", line).strip()
+            if not line:
+                continue
+            # Alleen echte mislukkingen ("LookupError: ...", "AudioProviderError: ..."), geen metadata-waarschuwingen
+            if TRACK_ERROR.match(line):
+                job["errors"] += 1
+            if line.startswith("Downloaded"):
+                job["done_tracks"] += 1
+            m = re.search(r"Found (\d+) songs", line)
+            if m:
+                job["total"] = int(m.group(1))
+        ok = proc.wait() == 0 and job["errors"] == 0
+        if ok:
+            break
     files = sorted(job_dir.rglob("*.mp3"))
     if files:
         job["name"] = files[0].parent.name if len(files) > 1 else files[0].stem

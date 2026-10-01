@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Download Spotify-tracks, -albums of -playlists als mp3 (via spotdl)."""
 import argparse
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 SPOTIFY_URL = re.compile(r"^https?://open\.spotify\.com/(?:intl-[a-z]+/)?(track|album|playlist)/\w+")
-SPOTDL = Path(__file__).parent / ".venv" / "bin" / "spotdl"
+BIN = Path(sys.executable).parent
+SPOTDL = BIN / "spotdl"
 
 
 def main() -> int:
@@ -28,8 +30,9 @@ def main() -> int:
     template = str(out / "{album-artist}" / "{album}" / "{track-number} - {title}.{output-ext}")
 
     cmd = [str(SPOTDL), "download", *args.urls,
-           "--format", "mp3", "--bitrate", args.bitrate, "--output", template]
-    return subprocess.call(cmd)
+           "--audio", "youtube-music", "youtube", "soundcloud", "piped", "--format", "mp3", "--bitrate", args.bitrate, "--output", template]
+    env = {**os.environ, "PATH": str(BIN) + os.pathsep + os.environ.get("PATH", "")}
+    return subprocess.call(cmd, env=env)
 
 
 if __name__ == "__main__":

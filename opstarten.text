@@ -1,4 +1,6 @@
-als je dit wilt opstarten vul dan in:
-.venv/bin/python app.py 
- 
- in terminal
+Als je dit wilt opstarten, dubbelklik op start.bat
+of typ in de terminal (in deze map):
+
+venv\Scripts\python app.py
+
+Open daarna http://127.0.0.1:5001 in je browser.
